@@ -1,0 +1,41 @@
+#!/bin/bash
+
+[[ "$0" == "$BASH_SOURCE" ]] && exit 0 || shopt -s extdebug
+
+rm -f collect
+
+_capture_exec()
+{
+[ -n "$COMP_LINE" ] && return  # do nothing if completing
+
+[ "$BASH_COMMAND" == "$PROMPT_COMMAND" ] && return # don't cause a preexec for $PROMPT_COMMAND
+
+# Don't get locked accidentally
+[ "shopt -u extdebug" == "$BASH_COMMAND" ] && return 0
+
+# Modify $this_command and then execute it
+
+[[ -e collect ]] &&  
+	{
+	echo $BASH_COMMAND >>collect
+	[[ $BASH_COMMAND =~ ^tpd ]] && 
+		{
+		cat collect
+		rm collect
+		trap - DEBUG
+		shopt -u extdebug
+		}
+	} || 
+	{
+	[[ $BASH_COMMAND =~ ^tpd ]] && 
+		{
+		echo $BASH_COMMAND >collect
+		history 1 | sed -e "s/^[ ]*[0-9]*[ ]*//" >>collect
+		}
+	}
+
+return 1 # prevent execution of original command
+}
+
+[[ "$0" == "$BASH_SOURCE" ]] || trap '_capture_exec' DEBUG
+
