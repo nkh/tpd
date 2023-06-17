@@ -1,5 +1,29 @@
 #!/bin/bash
 
+[[ "$1" == -h ]] &&
+	{
+	cat <<'EOH'
+NAME
+	T - a tmux/vim pipe debugger
+
+SYNOPSIS
+	T [options] [buffer name]
+
+OPTIONS
+	-r		reset
+	-c		clear
+	-k		kill
+
+	-n		size
+	-s		spell
+	-A		ANSI
+
+DESCRIPTION
+	
+EOH
+	exit
+	}
+
 [[ "$1" == -r ]] &&
 	{
 	[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && tmux kill-pane -t "$(cat T_pane)"
@@ -16,7 +40,7 @@
 
 [[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
 
-[[ "$1" == -n ]] && { shift ; out_size="head -n $1" ; shift ; } || out_size=cat
+[[ "$1" == -n ]] && { shift ; size=$1 ; shift ; [[ $size == 0 ]] && out_size=cat || out_size="head -n $size" ; } || out_size="head -n 500"
 [[ "$1" == -s ]] && { spell=" | set spell" ; shift ; } || spell=" | set nospell"
 [[ "$1" == -A ]] && { ANSI="| AnsiEsc" ; shift ; } || ANSI=
 
