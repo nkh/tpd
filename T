@@ -1,0 +1,29 @@
+#!/bin/bash
+
+[[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
+
+[[ "$1" == -c ]] &&
+	{
+	[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && { tmux send-keys -t "$(cat T_pane)" ':%bdelete' C-M ; }
+	# rm -f T_*
+	exit
+	}
+
+[[ "$1" == -s ]] && { spell=" | set spell" ; shift ; } || spell=" | set nospell"
+[[ "$1" == -A ]] && { ANSI="| AnsiEsc" ; shift ; } || ANSI=
+
+show_output() { echo vi "$1" >&2 ; tmux send-keys -t "$(cat T_pane)" ":tab drop $1 $nospell $ANSI " C-M ; }
+
+cat >"T_$1"
+
+echo "arg: $1" >&2
+
+my_pane=$(tmux display-message -p "#D")
+
+[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && show_output "T_$1" || 
+	{ pane=$(tmux split-window -P -F '#D' -l 80% vi) ; echo "$pane" >T_pane ; show_output "T_$1" ; }
+
+tmux select-pane -t $my_pane
+
+[[ "$1" ]] && cat "T_$1" || { ((kill_pane)) && { read -sn 1 </dev/tty ; tmux kill-pane -t "$(cat T_pane)" ; } ; }
+true
