@@ -13,6 +13,7 @@ OPTIONS
 	-h	displays this help
 	-r	kill preview, remove intermediary files
 	-c	kill preview
+	-S	skip
 	-n	limit the data size, 0 for no limit, default 500 lines
 	-s	spell check data
 	-A	install AnsiEsc to colorize
@@ -48,13 +49,15 @@ EOH
 	exit
 	}
 
+[[ "$1" == -S ]] && { cat ; exit ; }
 [[ "$1" == -n ]] && { shift ; size=$1 ; shift ; [[ $size == 0 ]] && out_size=cat || out_size="head -n $size" ; } || out_size="head -n 500"
 [[ "$1" == -s ]] && { spell=" | set spell" ; shift ; } || spell=" | set nospell"
 [[ "$1" == -A ]] && { ANSI="| AnsiEsc" ; shift ; } || ANSI=
 [[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
 
 
-show_output() { tmux send-keys -t "$(cat T_pane)" ":tab drop $1 $spell $ANSI " C-M ; }
+# handle swp files
+show_output() { tmux send-keys -t "$(cat T_pane)" ":tab drop $1 $spell | set readonly $ANSI" C-M ; }
 
 $out_size >"T_$1"
 
