@@ -1,41 +1,34 @@
 #!/bin/bash
 
-[[ "$0" == "$BASH_SOURCE" ]] && exit 0 || shopt -s extdebug
+# alias tpdg='. ~/nadim/devel/repositories/tpd/tpd'
+# tpdg ; tpd | { echo -e "ab\nde" ; echo 1 ; } | sed -e 's/a/A/'
 
-rm -f collect
+run_commands()
+{
+[[ -e collect ]] && pipeline=$(perl -pe 's/^.*tpd\s+\|?//' collect)
+eval "$pipeline"
+}
 
 _capture_exec()
 {
 [ -n "$COMP_LINE" ] && return  # do nothing if completing
 
-[ "$BASH_COMMAND" == "$PROMPT_COMMAND" ] && return # don't cause a preexec for $PROMPT_COMMAND
-
-# Don't get locked accidentally
-[ "shopt -u extdebug" == "$BASH_COMMAND" ] && return 0
-
-# Modify $this_command and then execute it
+[ "shopt -u extdebug" == "$BASH_COMMAND" ] && return 0 # don't get locked
 
 [[ -e collect ]] &&  
-	{
-	echo $BASH_COMMAND >>collect
-	[[ $BASH_COMMAND =~ ^tpd ]] && 
+	{ <&5 read -t 0.05 t || { trap - DEBUG ; shopt -u extdebug ; rm -f to_collect ; run_commands ; } ; } || 
+	{ [[ $BASH_COMMAND =~ ^tpd ]] && 
 		{
-		cat collect
-		rm collect
-		trap - DEBUG
-		shopt -u extdebug
-		}
-	} || 
-	{
-	[[ $BASH_COMMAND =~ ^tpd ]] && 
-		{
-		echo $BASH_COMMAND >collect
-		history 1 | sed -e "s/^[ ]*[0-9]*[ ]*//" >>collect
+		< <(history 1 | tee collect) IFS='|' read -ra cmds ; t=$((${#cmds[@]} - 1))
+		mkfifo to_collect ; exec 5<>to_collect ; for s in $(seq $t) ; do echo $s >&5 ; done
 		}
 	}
 
-return 1 # prevent execution of original command
+return 1 # skip execution
 }
 
-[[ "$0" == "$BASH_SOURCE" ]] || trap '_capture_exec' DEBUG
+rm -f collect to_collect
+
+[[ "$0" != "$BASH_SOURCE" ]] && { shopt -s extdebug  ; trap '_capture_exec' DEBUG ; true ; } 
+
 
