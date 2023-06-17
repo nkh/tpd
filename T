@@ -4,22 +4,33 @@
 	{
 	cat <<'EOH'
 NAME
-	T - a tmux/vim pipe debugger
+	T - a minimal tmux/vim "interactive" bash pipe visualizing filter
 
 SYNOPSIS
-	T [options] [buffer name]
+	T [options] name | cmd |cmd | T [options] name | ...
 
 OPTIONS
-	-r		reset
-	-c		clear
-	-k		kill
-
-	-n		size
-	-s		spell
-	-A		ANSI
+	-h	displays this help
+	-r	kill preview, remove intermediary files
+	-c	kill preview
+	-n	limit the data size, 0 for no limit, default 500 lines
+	-s	spell check data
+	-A	install AnsiEsc to colorize
+	-k	wait for input and kills preview
 
 DESCRIPTION
+	Place T anywhere in a pipeline to visualize it. Each of T opens
+	a tab in vi named after it's argument (in a tmux pane). 
 	
+	T leaves intermediary files for you. cleanup with -r, -c, or -k 
+
+EXAMPLES
+	fd | sed '...' | T sed1 | sed '...' | T -n 10 sed2 | lscolors | T -A
+		... | sed1 in vim | ... | sed2 in vim ... | vim colored entries
+	
+	T -r ; ... | T -k -A result or T -c | ... | T -A -k result
+		remove files and pane, run the command, the last T waits for a
+		key press to clean up, result is output in the terminal  
 EOH
 	exit
 	}
@@ -34,15 +45,14 @@ EOH
 [[ "$1" == -c ]] &&
 	{
 	[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && { tmux send-keys -t "$(cat T_pane)" ':%bdelete' C-M ; }
-	# rm -f T_*
 	exit
 	}
-
-[[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
 
 [[ "$1" == -n ]] && { shift ; size=$1 ; shift ; [[ $size == 0 ]] && out_size=cat || out_size="head -n $size" ; } || out_size="head -n 500"
 [[ "$1" == -s ]] && { spell=" | set spell" ; shift ; } || spell=" | set nospell"
 [[ "$1" == -A ]] && { ANSI="| AnsiEsc" ; shift ; } || ANSI=
+[[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
+
 
 show_output() { tmux send-keys -t "$(cat T_pane)" ":tab drop $1 $spell $ANSI " C-M ; }
 
@@ -55,5 +65,8 @@ my_pane=$(tmux display-message -p "#D")
 
 tmux select-pane -t $my_pane
 
-[[ "$1" ]] && cat "T_$1" || { ((kill_pane)) && { read -sn 1 </dev/tty ; tmux kill-pane -t "$(cat T_pane)" ; } ; }
+[[ "$1" ]] && cat "T_$1"
+
+((kill_pane)) && { read -sn 1 </dev/tty ; tmux kill-pane -t "$(cat T_pane)" ; GLOBIGNORE="T_pane"; rm T_* ; }
+
 true
