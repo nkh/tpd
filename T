@@ -55,20 +55,20 @@ EOH
 [[ "$1" == -A ]] && { ANSI="| AnsiEsc" ; shift ; } || ANSI=
 [[ "$1" == -k ]] && { kill_pane=1 ; shift ; }
 
+out_file="T_$1"
 
-# handle swp files
 show_output() { tmux send-keys -t "$(cat T_pane)" ":tab drop $1 $spell | set readonly $ANSI" C-M ; }
 
-$out_size >"T_$1"
+$out_size >"$out_file"
 
 my_pane=$(tmux display-message -p "#D")
 
-[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && show_output "T_$1" || 
-	{ pane=$(tmux split-window -P -F '#D' -l 80% vi) ; echo "$pane" >T_pane ; show_output "T_$1" ; }
-
+[[ -e T_pane && $(tmux list-panes | rg $(cat T_pane)) ]] && show_output "$out_file" || 
+	{ pane=$(tmux split-window -P -F '#D' -l 80% 'vi -n') ; echo "$pane" >T_pane ; show_output "$out_file" ; }
+ 
 tmux select-pane -t $my_pane
 
-[[ "$1" ]] && cat "T_$1"
+[[ "$1" ]] && cat "$out_file"
 
 ((kill_pane)) && { read -sn 1 </dev/tty ; tmux kill-pane -t "$(cat T_pane)" ; GLOBIGNORE="T_pane"; rm T_* ; }
 

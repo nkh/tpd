@@ -3,7 +3,7 @@
 	T - a minimal tmux/vim "interactive" bash pipe visualizing filter
 ## Screenshots
 
-![Screenshot](https://raw.github.com/nkh/ftl/main/screenshots/ss1.png)
+![Screenshot](https://github.com/nkh/tpd/blob/main/screenshots/ss1.png)
 
 # SYNOPSIS
 	T [options] name | cmd |cmd | T [options] name | ...
